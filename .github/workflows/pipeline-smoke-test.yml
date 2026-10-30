@@ -27,10 +27,10 @@ jobs:
           python-version: "3.11"
       - name: Install Python packages
         run: pip install -r requirements.txt
-      - name: Run credential-free smoke test
+      - name: Run credential-free smoke test with compact captions
         env:
           TEST_MODE: "1"
-        run: python automation/daily_short.py --test
+        run: python automation/run_pipeline.py --test
       - name: Validate MP4 with ffprobe
         run: |
           ffprobe -v error -show_entries format=duration:stream=codec_type,width,height -of json output/daily-short.mp4
