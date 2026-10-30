@@ -3,17 +3,20 @@
 A free-first scheduled AI-news Shorts pipeline for the YouTube channel. GitHub Actions is the execution host; this repository is the source and dashboard. It is not an always-on web server.
 
 ## Pipeline
-1. Discover AI news from official publisher RSS feeds.
-2. Generate a short Indian Professional English script using Gemini.
-3. Narrate with offline eSpeak NG (no paid TTS).
-4. Render a vertical MP4 with captions using FFmpeg.
+1. Discover AI news from publisher feeds.
+2. Generate an Indian Professional English script using Gemini.
+3. Narrate with offline eSpeak NG.
+4. Render a vertical MP4 with compact captions using FFmpeg.
 5. Upload through YouTube Data API OAuth.
 6. Preserve the video, script, metadata and upload receipt as a 7-day Actions artifact.
 
 ## Schedule
 Daily at 09:00 Asia/Kolkata (03:30 UTC). Manual workflow runs are also supported.
 
-## Dashboard hosting\nThe dashboard source is `index.html`. To publish it, open Settings → Pages and select **GitHub Actions** as the build and deployment source. The deployment workflow then publishes the dashboard. GitHub Pages is static hosting only; the scheduled backend work runs in GitHub Actions.\n\n## Configure secrets
+## Dashboard hosting
+The dashboard source is `index.html`. Open Settings → Pages and select **GitHub Actions** as the build and deployment source. GitHub Pages is static hosting only; scheduled backend work runs in GitHub Actions.
+
+## Configure secrets
 Repository Settings → Secrets and variables → Actions:
 - `GEMINI_API_KEY`
 - `YOUTUBE_CLIENT_ID`
@@ -23,18 +26,18 @@ Repository Settings → Secrets and variables → Actions:
 Optional repository variable:
 - `YOUTUBE_PRIVACY`: `private`, `unlisted` or `public`. Default is `private`.
 
-Do not commit secrets or send them in chat. Use Google AI Studio for a Gemini API key and Google Cloud Console to enable YouTube Data API v3 and create OAuth credentials. The refresh token must be authorized by the channel owner with `youtube.upload` scope.
+Do not commit secrets or send them in chat. Create a Gemini API key in Google AI Studio. Enable YouTube Data API v3 in Google Cloud and create OAuth credentials. The refresh token must be authorized by the channel owner with the `youtube.upload` scope.
 
 ## Test
-1. Run **Pipeline Smoke Test** first. This test fetches an official feed item and creates a clearly labelled demo MP4 without Gemini or YouTube credentials.
+1. The **Pipeline Smoke Test** runs automatically on relevant code pushes. It fetches a publisher feed item and creates a clearly labelled demo MP4 without Gemini or YouTube credentials.
 2. Download and inspect the `daily-shorts-pipeline-demo` artifact.
-3. After configuring all secrets, run **Daily AI News Short** manually.
+3. After configuring all four secrets, run **Daily AI News Short** manually.
 4. Verify the uploaded video's privacy and playback before relying on the daily schedule.
 
 ## Honest limitations
-- This is a scheduled serverless-style pipeline, not a persistent server process.
-- The demo mode is not a real news video and does not publish.
-- Production generation and upload cannot succeed until the owner configures API secrets.
+- This is a scheduled runner, not a persistent server process.
+- Demo mode is not a news publication and does not upload.
+- Production generation and upload require owner-configured API secrets.
 - Gemini quotas and Google OAuth verification requirements can change.
-- The offline voice is synthetic; visuals are an animated title card and captions, not cinematic AI footage.
+- The offline voice is synthetic; visuals are a motion title card and captions, not cinematic AI footage.
 - Google may restrict unverified YouTube API projects to private uploads.
