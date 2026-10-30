@@ -15,6 +15,7 @@ import requests
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
+# Smoke-test trigger: keep this pipeline independently runnable in GitHub Actions.
 OUT = ROOT / "output"
 OUT.mkdir(exist_ok=True)
 FEEDS = [
@@ -23,7 +24,7 @@ FEEDS = [
     "https://www.anthropic.com/news/rss.xml",
     "https://blogs.nvidia.com/feed/",
 ]
-MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 def require_env(name: str) -> str:
     value = os.getenv(name, "").strip()
