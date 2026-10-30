@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Daily AI Shorts Studio</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#141c31;--muted:#9eabc4;--line:#26334f;--accent:#65d5ff;--good:#6ee7b7;--warn:#fbbf24}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0%,#17294b 0,transparent 38%),var(--bg);color:#edf4ff;font:15px/1.6 system-ui, sans-serif}
+main{max-width:1040px;margin:auto;padding:36px 20px}header{display:flex;justify-content:space-between;gap:20px;align-items:center;flex-wrap:wrap}
+h1{font-size:clamp(28px,5vw,44px);line-height:1.1;margin:8px 0}p{color:var(--muted)}a{color:var(--accent)}.pill{border:1px solid var(--line);border-radius:999px;padding:6px 12px;color:var(--good)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:28px 0}.card{background:linear-gradient(145deg,#17223a,#11192b);border:1px solid var(--line);border-radius:18px;padding:20px}.card h2{font-size:16px;margin:0 0 8px}.big{font-size:24px;font-weight:700}.muted{color:var(--muted);font-size:13px}.steps li{margin:9px 0}.btn{display:inline-block;padding:11px 16px;background:#123b58;border:1px solid #256487;border-radius:10px;text-decoration:none;color:#e7f8ff;margin:6px 8px 6px 0}
+footer{margin-top:42px;border-top:1px solid var(--line);padding-top:18px;color:var(--muted);font-size:13px}
+</style></head><body><main>
+<header><div><div class="muted">AUTONOMOUS CONTENT PIPELINE</div><h1>Daily AI Shorts Studio</h1><p>Official-source AI news → script → narration → vertical video → YouTube</p></div><span class="pill" id="health">Dashboard ready</span></header>
+<section class="grid">
+<div class="card"><h2>Daily schedule</h2><div class="big">09:00 IST</div><div class="muted">Every day · GitHub Actions UTC cron</div></div>
+<div class="card"><h2>Video format</h2><div class="big">9:16 · 720×1280</div><div class="muted">MP4 · captions · offline narration</div></div>
+<div class="card"><h2>Language</h2><div class="big">Indian English</div><div class="muted">No Telugu or Hindi narration</div></div>
+<div class="card"><h2>Publishing safety</h2><div class="big">Private by default</div><div class="muted">Public publishing only after Google API verification</div></div>
+</section>
+<section class="card"><h2>Pipeline status</h2><p id="status">Status data is published by the latest GitHub Actions run. Open Actions to inspect the actual run and download the MP4 artifact.</p>
+<div class="muted" id="updated">No verified production run has been recorded by this dashboard yet.</div>
+<a class="btn" href="https://github.com/dadimanohar/Video/actions">Open workflow runs</a><a class="btn" href="https://github.com/dadimanohar/Video">Source repository</a></section>
+<section class="card" style="margin-top:14px"><h2>First-time setup required</h2><ol class="steps">
+<li>Add the four repository secrets: <code>GEMINI_API_KEY</code>, <code>YOUTUBE_CLIENT_ID</code>, <code>YOUTUBE_CLIENT_SECRET</code>, <code>YOUTUBE_REFRESH_TOKEN</code>.</li>
+<li>Run <b>Pipeline Smoke Test</b> first. It validates feed access, narration, FFmpeg rendering and MP4 output without publishing.</li>
+<li>Run <b>Daily AI News Short</b> manually after secrets are configured. Confirm the private upload URL.</li>
+<li>Only set repository variable <code>YOUTUBE_PRIVACY=public</code> after Google allows public uploads for your API project.</li></ol>
+<a class="btn" href="https://github.com/dadimanohar/Video/settings/secrets/actions">Configure repository secrets</a></section>
+<footer>Built for a free-first workflow. This page is a status/control guide, not an always-on backend. GitHub Actions performs scheduled work. Never put API keys in website files or commits.</footer>
+</main>
+<script>
+fetch('./status.json',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).then(s=>{
+document.getElementById('health').textContent=s.status||'Status available';
+document.getElementById('status').textContent=s.message||'Latest workflow status available.';
+document.getElementById('updated').textContent='Last updated: '+(s.updated_at||'not recorded')+' · '+(s.run_url||'');
+}).catch(()=>{});
+</script></body></html>
