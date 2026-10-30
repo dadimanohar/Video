@@ -13,7 +13,7 @@ A free-first scheduled AI-news Shorts pipeline for the YouTube channel. GitHub A
 ## Schedule
 Daily at 09:00 Asia/Kolkata (03:30 UTC). Manual workflow runs are also supported.
 
-## Configure secrets
+## Dashboard hosting\nThe dashboard source is `index.html`. To publish it, open Settings → Pages and select **GitHub Actions** as the build and deployment source. The deployment workflow then publishes the dashboard. GitHub Pages is static hosting only; the scheduled backend work runs in GitHub Actions.\n\n## Configure secrets
 Repository Settings → Secrets and variables → Actions:
 - `GEMINI_API_KEY`
 - `YOUTUBE_CLIENT_ID`
