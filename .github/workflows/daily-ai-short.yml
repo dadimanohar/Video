@@ -37,7 +37,7 @@ jobs:
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
           YOUTUBE_PRIVACY: ${{ vars.YOUTUBE_PRIVACY || 'private' }}
-        run: python automation/daily_short.py
+        run: python automation/run_pipeline.py
       - name: Keep rendered output for review
         if: always()
         uses: actions/upload-artifact@v4
