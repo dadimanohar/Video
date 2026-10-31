@@ -84,7 +84,7 @@ jobs:
               "video_url": uploaded.get("url"),
               "privacy": os.getenv("YOUTUBE_PRIVACY", "private")
           }
-          Path("status.json").write_text(json.dumps(data, indent=2) + "\\n")
+          Path("status.json").write_text(json.dumps(data, indent=2) + "\n")
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
