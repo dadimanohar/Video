@@ -27,6 +27,8 @@ jobs:
           python-version: "3.11"
       - name: Install Python packages
         run: pip install -r requirements.txt
+      - name: Run source and date regression tests
+        run: python -m unittest discover -s automation -p 'test_*.py' -v
       - name: Run credential-free smoke test with compact captions
         env:
           TEST_MODE: "1"
