@@ -8,7 +8,7 @@ No paid TTS: narration uses the runner's offline espeak-ng voice.
 from __future__ import annotations
 import json, os, re, subprocess, sys, textwrap, time, xml.etree.ElementTree as ET
 from html.parser import HTMLParser
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
 from pathlib import Path
 from urllib.parse import urlparse
@@ -54,7 +54,9 @@ class ArticleTextParser(HTMLParser):
         if tag in self.SKIP: self.skip_depth += 1
         if tag in {"p", "h1", "h2", "h3", "article"} and not self.skip_depth:
             self.parts.append("\n")
-        if tag == "meta" and attrs.get("name", "").lower() in {"description", "og:description"}:
+        meta_name = attrs.get("name", "").lower()
+        meta_property = attrs.get("property", "").lower()
+        if tag == "meta" and (meta_name in {"description", "og:description"} or meta_property == "og:description"):
             content = attrs.get("content", "").strip()
             if content: self.parts.append(content)
     def handle_endtag(self, tag):
@@ -63,8 +65,37 @@ class ArticleTextParser(HTMLParser):
         value = clean(data)
         if value and not self.skip_depth: self.parts.append(value)
 
+def parse_published_date(raw_date):
+    """Parse common RSS/Atom timestamps into timezone-aware UTC datetimes."""
+    if not raw_date:
+        return None
+    raw_date = raw_date.strip()
+    try:
+        parsed = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            parsed = parsedate_to_datetime(raw_date)
+        except (TypeError, ValueError, OverflowError):
+            return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def is_recent_published(raw_date, now=None):
+    """Keep undated items as a fallback; reject stale and implausibly future dates."""
+    published = parse_published_date(raw_date)
+    if published is None:
+        return True
+    now = now or datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    age = now.astimezone(timezone.utc) - published
+    return timedelta(hours=-24) <= age <= timedelta(days=14)
+
+
 def fetch_article_context(item):
-    """Fetch linked publisher page; RSS alone is not treated as full evidence."""
+    """Fetch linked publisher page; RSS alone is not treated as full evidence.""
     try:
         response = requests.get(item["url"], timeout=18, headers={
             "User-Agent": "Mozilla/5.0 (compatible; DailyAINewsShort/1.0)",
@@ -103,7 +134,7 @@ def fetch_items():
                     link = linkel.attrib.get("href","") if linkel is not None else ""
                     summary = clean(entry.findtext("a:summary", default="", namespaces=ns) or entry.findtext("a:content", default="", namespaces=ns))
                     pub = clean(entry.findtext("a:published", default="", namespaces=ns) or entry.findtext("a:updated", default="", namespaces=ns))
-                    if title and link.startswith("https://"):
+                    if title and is_official_url(link):
                         feed_items.append({"title":title,"url":link,"summary":summary[:500],"published":pub,"domain":urlparse(link).netloc})
             items.extend(feed_items)
             print(f"Feed OK {feed}: {len(feed_items)} items")
@@ -111,19 +142,11 @@ def fetch_items():
             print(f"Feed unavailable {feed}: {e}")
     unique = {x["url"]:x for x in items}
     candidates = list(unique.values())
-    now = datetime.now(timezone.utc)
-    for item in candidates:
-        try:
-            raw_date = item.get("published", "")
-            parsed = parsedate_to_datetime(raw_date) if raw_date and not raw_date.endswith("Z") else None
-            if raw_date.endswith("Z"):
-                parsed = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
-            if parsed and parsed.tzinfo is None: parsed = parsed.replace(tzinfo=timezone.utc)
-            item["_published_dt"] = parsed.astimezone(timezone.utc) if parsed else None
-        except Exception:
-            item["_published_dt"] = None
-    fresh = [x for x in candidates if x["_published_dt"] is None or (now-x["_published_dt"]).days <= 14]
-    fresh.sort(key=lambda x: x["_published_dt"] or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+    fresh = [x for x in candidates if is_recent_published(x.get("published", ""))]
+    fresh.sort(
+        key=lambda x: parse_published_date(x.get("published", "")) or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True
+    )
     for item in fresh[:12]:
         item["article_context"] = fetch_article_context(item)
     for item in fresh:
