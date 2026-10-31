@@ -19,10 +19,11 @@ footer{margin-top:42px;border-top:1px solid var(--line);padding-top:18px;color:v
 <div class="muted" id="updated">No production run has been recorded yet.</div><div class="muted" id="video"></div>
 <a class="btn" href="https://github.com/dadimanohar/Video/actions">Open workflow runs</a><a class="btn" href="https://github.com/dadimanohar/Video">Source repository</a></section>
 <section class="card" style="margin-top:14px"><h2>First-time setup required</h2><ol class="steps">
-<li>Add the four repository secrets: <code>GEMINI_API_KEY</code>, <code>YOUTUBE_CLIENT_ID</code>, <code>YOUTUBE_CLIENT_SECRET</code>, <code>YOUTUBE_REFRESH_TOKEN</code>.</li>
-<li>Run <b>Pipeline Smoke Test</b> first. It validates feed access, narration, FFmpeg rendering and MP4 output without publishing.</li>
-<li>Run <b>Daily AI News Short</b> manually after secrets are configured. Confirm the private upload URL.</li>
-<li>Only set repository variable <code>YOUTUBE_PRIVACY=public</code> after Google allows public uploads for your API project.</li></ol>
+<li>Create a Gemini API key and add it as <code>GEMINI_API_KEY</code>. Add the three YouTube OAuth values as GitHub Actions secrets.</li>
+<li>Set the Google OAuth app publishing status to <b>In production</b> before generating the refresh token. An External app left in Testing expires this YouTube refresh token after 7 days.</li>
+<li>The credential-free <b>Pipeline Smoke Test</b> has passed: feed discovery, regression tests, narration, FFmpeg rendering and MP4 validation.</li>
+<li>Run <b>Daily AI News Short</b> manually after all secrets are configured. Confirm the private upload URL and playback.</li>
+<li>Only set repository variable <code>YOUTUBE_PRIVACY=public</code> when public publishing is explicitly wanted and your Google API project permits it.</li></ol>
 <a class="btn" href="https://github.com/dadimanohar/Video/settings/secrets/actions">Configure repository secrets</a></section>
 <footer>Built for a free-first workflow. This page is a status/control guide, not an always-on backend. GitHub Actions performs scheduled work. Never put API keys in website files or commits.</footer>
 </main>
@@ -30,6 +31,7 @@ footer{margin-top:42px;border-top:1px solid var(--line);padding-top:18px;color:v
 fetch('./status.json',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).then(s=>{
 document.getElementById('health').textContent=s.status||'Status available';
 document.getElementById('status').textContent=s.message||'Latest workflow status available.';
-document.getElementById('updated').textContent='Last updated: '+(s.updated_at||'not recorded')+' · '+(s.run_url||'');\nif(s.video_url){const a=document.createElement('a');a.href=s.video_url;a.textContent='Open latest uploaded Short';a.target='_blank';a.rel='noopener';document.getElementById('video').replaceChildren(a);}
+document.getElementById('updated').textContent='Last updated: '+(s.updated_at||'not recorded')+' · '+(s.run_url||'');
+if(s.video_url){const a=document.createElement('a');a.href=s.video_url;a.textContent='Open latest uploaded Short';a.target='_blank';a.rel='noopener';document.getElementById('video').replaceChildren(a);}
 }).catch(()=>{});
 </script></body></html>
