@@ -5,7 +5,7 @@ A free-first scheduled AI-news Shorts pipeline for the YouTube channel. GitHub A
 ## Pipeline
 1. Discover AI news from official OpenAI, Google, NVIDIA and Anthropic publisher feeds; links are restricted to those official domains.
 2. Prioritise recent entries (up to 14 days), fetch readable article text where available, and reject weakly supported or stale stories.
-3. Generate a validated Indian Professional English script using Gemini.
+3. Generate a validated Indian Professional English script using Gemini 3.8 Flash (default; model can be overridden through the optional `GEMINI_MODEL` repository variable).
 4. Narrate with offline eSpeak NG.
 5. Render a vertical MP4 with compact captions using FFmpeg.
 6. Upload through YouTube Data API OAuth.
@@ -24,8 +24,10 @@ Repository Settings → Secrets and variables → Actions:
 - `YOUTUBE_CLIENT_SECRET`
 - `YOUTUBE_REFRESH_TOKEN`
 
-Optional repository variable:
+Optional repository variables:
+- `GEMINI_MODEL`: defaults to `gemini-3.8-flash`.
 - `YOUTUBE_PRIVACY`: `private`, `unlisted` or `public`. Default is `private`.
+The Gemini free tier has usage limits; check Google's current limits before increasing volume.
 
 Do not commit secrets or send them in chat. Create a Gemini API key in Google AI Studio. Enable YouTube Data API v3 in Google Cloud and create OAuth credentials. The refresh token must be authorized by the channel owner with the `youtube.upload` scope.
 
