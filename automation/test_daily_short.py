@@ -32,6 +32,46 @@ class SourceValidationTests(unittest.TestCase):
         self.assertFalse(is_recent_published("", now))
         self.assertFalse(is_recent_published("2026-10-15T00:00:00Z", now))
         self.assertFalse(is_recent_published("2026-11-02T00:00:00Z", now))
+
+    def test_gemini_request_uses_structured_json_without_legacy_sampling_fields(self):
+        import json
+        from unittest.mock import patch
+        from daily_short import generate_script
+
+        source = {
+            "title": "A current AI update",
+            "url": "https://openai.com/news/example",
+            "summary": "Official summary",
+            "published": "Sat, 31 Oct 2026 00:00:00 GMT",
+            "domain": "openai.com",
+            "article_context": "Detailed official article context."
+        }
+        script = (
+            "This is a verified update from the official publisher. " * 12
+        ).strip()
+        model_response = {
+            "status": "ready",
+            "title": "A verified AI update",
+            "script": script,
+            "description": "A factual summary.",
+            "used_urls": [source["url"]]
+        }
+        fake_response = type("FakeResponse", (), {
+            "status_code": 200,
+            "json": lambda self: {
+                "candidates": [{
+                    "content": {"parts": [{"text": json.dumps(model_response)}]}
+                }]
+            }
+        })()
+        with patch.dict("os.environ", {"GEMINI_API_KEY": "test-key"}):
+            with patch("daily_short.requests.post", return_value=fake_response) as post:
+                result = generate_script([source])
+        payload = post.call_args.kwargs["json"]
+        self.assertEqual(payload["generationConfig"]["responseMimeType"], "application/json")
+        self.assertNotIn("temperature", payload["generationConfig"])
+        self.assertEqual(result["sources"], [source])
+
  
 class FakeRequest:
     def __init__(self, payload):
