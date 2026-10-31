@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: daily-ai-short
@@ -31,6 +31,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Generate, render and upload Short
+        id: pipeline
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
@@ -46,3 +47,46 @@ jobs:
           path: output/
           if-no-files-found: ignore
           retention-days: 7
+      - name: Update public dashboard status
+        if: always()
+        continue-on-error: true
+        env:
+          PIPELINE_OUTCOME: ${{ steps.pipeline.outcome }}
+          HAS_REQUIRED_SECRETS: ${{ secrets.GEMINI_API_KEY != '' && secrets.YOUTUBE_CLIENT_ID != '' && secrets.YOUTUBE_CLIENT_SECRET != '' && secrets.YOUTUBE_REFRESH_TOKEN != '' }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          python - <<'PY'
+          import json, os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          receipt = Path("output/youtube-upload.json")
+          uploaded = json.loads(receipt.read_text()) if receipt.exists() else {}
+          has_secrets = os.getenv("HAS_REQUIRED_SECRETS", "false").lower() == "true"
+          if uploaded.get("video_id"):
+              status = "UPLOAD_SUCCESS"
+              message = "The latest production run uploaded a Short successfully."
+          elif not has_secrets:
+              status = "SETUP_REQUIRED"
+              message = "Production secrets are incomplete. Configure all four Actions secrets before uploading."
+          elif os.getenv("PIPELINE_OUTCOME") == "success":
+              status = "RENDERED_NOT_UPLOADED"
+              message = "The pipeline completed without an upload receipt. Review the workflow artifact."
+          else:
+              status = "FAILED"
+              message = "The latest production run failed. Open the workflow run for the exact error."
+          data = {
+              "status": status,
+              "message": message,
+              "updated_at": datetime.now(timezone.utc).isoformat(),
+              "run_url": os.getenv("RUN_URL"),
+              "run_number": os.getenv("RUN_NUMBER"),
+              "video_url": uploaded.get("url"),
+              "privacy": os.getenv("YOUTUBE_PRIVACY", "private")
+          }
+          Path("status.json").write_text(json.dumps(data, indent=2) + "\\n")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add status.json
+          git diff --cached --quiet || (git commit -m "Update daily Shorts pipeline status" && git push)
