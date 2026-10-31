@@ -7,6 +7,7 @@ No paid TTS: narration uses the runner's offline espeak-ng voice.
 """
 from __future__ import annotations
 import json, os, re, subprocess, sys, textwrap, time, xml.etree.ElementTree as ET
+from html.parser import HTMLParser
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -34,6 +35,45 @@ def require_env(name: str) -> str:
 
 def clean(s: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", s or "")).strip()
+
+
+class ArticleTextParser(HTMLParser):
+    """Dependency-free extractor for readable publisher article text."""
+    SKIP = {"script", "style", "noscript", "svg", "nav", "footer", "header", "form"}
+    def __init__(self):
+        super().__init__()
+        self.skip_depth = 0
+        self.parts = []
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag in self.SKIP: self.skip_depth += 1
+        if tag in {"p", "h1", "h2", "h3", "article"} and not self.skip_depth:
+            self.parts.append("\n")
+        if tag == "meta" and attrs.get("name", "").lower() in {"description", "og:description"}:
+            content = attrs.get("content", "").strip()
+            if content: self.parts.append(content)
+    def handle_endtag(self, tag):
+        if tag in self.SKIP and self.skip_depth: self.skip_depth -= 1
+    def handle_data(self, data):
+        value = clean(data)
+        if value and not self.skip_depth: self.parts.append(value)
+
+def fetch_article_context(item):
+    """Fetch linked publisher page; RSS alone is not treated as full evidence."""
+    try:
+        response = requests.get(item["url"], timeout=18, headers={
+            "User-Agent": "Mozilla/5.0 (compatible; DailyAINewsShort/1.0)",
+            "Accept": "text/html,application/xhtml+xml"
+        })
+        response.raise_for_status()
+        if "html" not in response.headers.get("Content-Type", "").lower():
+            return ""
+        parser = ArticleTextParser()
+        parser.feed(response.text[:1_500_000])
+        return clean(" ".join(parser.parts))[:7000]
+    except Exception as exc:
+        print(f"Article page unavailable {item['url']}: {exc}")
+        return ""
 
 def fetch_items():
     items = []
@@ -65,15 +105,34 @@ def fetch_items():
         except Exception as e:
             print(f"Feed unavailable {feed}: {e}")
     unique = {x["url"]:x for x in items}
-    return list(unique.values())[:24]
+    candidates = list(unique.values())
+    now = datetime.now(timezone.utc)
+    for item in candidates:
+        try:
+            raw_date = item.get("published", "")
+            parsed = parsedate_to_datetime(raw_date) if raw_date and not raw_date.endswith("Z") else None
+            if raw_date.endswith("Z"):
+                parsed = datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
+            if parsed and parsed.tzinfo is None: parsed = parsed.replace(tzinfo=timezone.utc)
+            item["_published_dt"] = parsed.astimezone(timezone.utc) if parsed else None
+        except Exception:
+            item["_published_dt"] = None
+    fresh = [x for x in candidates if x["_published_dt"] is None or (now-x["_published_dt"]).days <= 14]
+    fresh.sort(key=lambda x: x["_published_dt"] or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+    for item in fresh[:12]:
+        item["article_context"] = fetch_article_context(item)
+    for item in fresh:
+        item.pop("_published_dt", None)
+    return fresh[:12]
 
 def generate_script(items):
     key = require_env("GEMINI_API_KEY")
     if not items:
         raise RuntimeError("No official AI news RSS items were available. Refusing to invent a story.")
-    prompt = """You are an accurate technology news editor. Select one significant, recent AI development from the supplied official-source feed entries.
+    prompt = """You are an accurate technology news editor. Select one significant, recent AI development from the supplied official publisher feed entries and fetched article excerpts.
 Write in Indian Professional English only. No Telugu or Hindi.
-Do not invent facts, dates, benchmarks, prices, release status or quotes. Treat RSS summaries as leads, not proof: choose a story only when its official source URL and headline clearly support the core claim. If evidence is ambiguous, return status=skip.
+Use article_context as primary evidence and RSS summary only as a lead. If article_context is empty, choose an item only when its headline and summary unambiguously support a narrow factual statement; otherwise skip.
+Do not invent facts, dates, benchmarks, prices, release status, quotes, or implications. Do not present an announcement as generally available unless the article explicitly says so. If evidence is ambiguous or all stories are stale or weak, return status=skip.
 Create a YouTube Short narration of 105-135 words (about 45-60 seconds), a concise title, and a description that includes the source URLs. Explain availability precisely (research preview, rollout, limited access or generally available). Avoid clickbait.
 Return strict JSON with keys: status (ready or skip), title, script, description, used_urls (array).
 Only use URLs from the supplied list."""
@@ -92,7 +151,11 @@ Only use URLs from the supplied list."""
     sources = [x for x in items if x["url"] in used]
     if not sources:
         raise RuntimeError("Model did not cite any supplied official source. Skipping.")
-    words = len(data.get("script","").split())
+    if not data.get('title') or not data.get('script') or not data.get('description'):
+        raise RuntimeError('Gemini response is missing title, script or description.')
+    if len(data['title']) > 100:
+        raise RuntimeError('Generated title exceeds YouTube title limit.')
+    words = len(data.get('script','').split())
     if words < 75 or words > 165:
         raise RuntimeError(f"Script length outside safety range ({words} words).")
     data["sources"] = sources
