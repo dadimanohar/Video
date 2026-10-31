@@ -26,6 +26,11 @@ FEEDS = [
     "https://blogs.nvidia.com/feed/",
 ]
 MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+OFFICIAL_DOMAINS = ("openai.com", "google.com", "anthropic.com", "nvidia.com")
+
+def is_official_url(url: str) -> bool:
+    host = (urlparse(url).hostname or "").lower()
+    return url.startswith("https://") and any(host == domain or host.endswith("." + domain) for domain in OFFICIAL_DOMAINS)
 
 def require_env(name: str) -> str:
     value = os.getenv(name, "").strip()
@@ -88,7 +93,7 @@ def fetch_items():
                 link = clean(item.findtext("link"))
                 desc = clean(item.findtext("description"))
                 pub = clean(item.findtext("pubDate"))
-                if title and link.startswith("https://"):
+                if title and is_official_url(link):
                     feed_items.append({"title":title,"url":link,"summary":desc[:500],"published":pub,"domain":urlparse(link).netloc})
             if not feed_items:
                 ns = {"a":"http://www.w3.org/2005/Atom"}
@@ -245,10 +250,13 @@ def upload(data):
                       scopes=["https://www.googleapis.com/auth/youtube.upload"])
     youtube=build("youtube","v3",credentials=creds)
     desc=data["description"].strip()+"\n\nSources:\n"+"\n".join(x["url"] for x in data["sources"])+"\n\n#AI #Technology #Shorts"
+    privacy = os.getenv("YOUTUBE_PRIVACY", "private").strip().lower()
+    if privacy not in {"private", "unlisted", "public"}:
+        raise RuntimeError("YOUTUBE_PRIVACY must be private, unlisted or public.")
     body={"snippet":{"title":data["title"][:100],"description":desc[:4900],
                     "tags":["AI","Artificial Intelligence","Technology","AI News","Shorts"],
                     "categoryId":"28","defaultLanguage":"en"},
-          "status":{"privacyStatus":os.getenv("YOUTUBE_PRIVACY","public"),
+          "status":{"privacyStatus":privacy,
                     "selfDeclaredMadeForKids":False,"containsSyntheticMedia":True}}
     req=youtube.videos().insert(part="snippet,status",body=body,
         media_body=MediaFileUpload(str(OUT/"daily-short.mp4"),mimetype="video/mp4",chunksize=8*1024*1024,resumable=True))
