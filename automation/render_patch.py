@@ -11,7 +11,7 @@ def render(data):
     (OUT/"script.txt").write_text(script, encoding="utf-8")
     (OUT/"metadata.json").write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     voices = subprocess.run(["espeak-ng", "--voices"], capture_output=True, text=True, check=True).stdout
-    voice = "en-in" if re.search(r"\\ben-in\\b", voices) else "en"
+    voice = "en-in" if re.search(r"\ben-in\b", voices) else "en"
     subprocess.run(["espeak-ng", "-v", voice, "-s", "148", "-w", str(OUT/"voice.wav"), script], check=True)
 
     W, H = 720, 1280
@@ -39,8 +39,7 @@ def render(data):
     draw.text((48,1160), "Follow for clear, source-linked AI updates", font=small, fill=(205,220,240))
     img.save(OUT/"background.png")
 
-    # Keep captions compact and split long sentences into short readable lines.
-    chunks = [c.strip() for c in re.split(r'(?<=[.!?])\\s+', script) if c.strip()]
+    chunks = [c.strip() for c in re.split(r'(?<=[.!?])\s+', script) if c.strip()]
     probe = subprocess.run(["ffprobe","-v","error","-show_entries","format=duration","-of","default=noprint_wrappers=1:nokey=1",str(OUT/"voice.wav")], capture_output=True, text=True, check=True)
     duration = float(probe.stdout.strip())
     weights = [max(1,len(c.split())) for c in chunks]
@@ -49,14 +48,16 @@ def render(data):
     def stamp(sec):
         ms = int(round(sec*1000)); h=ms//3600000; ms%=3600000; m=ms//60000; ms%=60000; s=ms//1000; ms%=1000
         return f"{h:02}:{m:02}:{s:02},{ms:03}"
-    with (OUT/"captions.srt").open("w", encoding="utf-8") as f:
+    captions = OUT/"captions.srt"
+    with captions.open("w", encoding="utf-8") as f:
         for i,(chunk,weight) in enumerate(zip(chunks,weights),1):
             start = cursor
             cursor += duration*weight/total
             lines = pipeline.textwrap.wrap(chunk, width=34, break_long_words=False, break_on_hyphens=False)
-            f.write(f"{i}\\n{stamp(start)} --> {stamp(cursor)}\\n" + "\\n".join(lines) + "\\n\\n")
+            f.write(f"{i}\n{stamp(start)} --> {stamp(cursor)}\n" + "\n".join(lines) + "\n\n")
 
-    vf = "scale=720:1280,zoompan=z='min(zoom+0.00025,1.08)':d=1:s=720x1280:fps=30,subtitles=output/captions.srt:force_style='FontName=DejaVu Sans,FontSize=9,PrimaryColour=&H00FFFFFF,OutlineColour=&H00101010,BorderStyle=1,Outline=1,Shadow=0,Alignment=2,MarginV=145'"
+    # Use an absolute subtitle path: FFmpeg's subtitles filter resolves paths from its process cwd.
+    vf = f"scale=720:1280,zoompan=z='min(zoom+0.00025,1.08)':d=1:s=720x1280:fps=30,subtitles={captions.as_posix()}:force_style='FontName=DejaVu Sans,FontSize=9,PrimaryColour=&H00FFFFFF,OutlineColour=&H00101010,BorderStyle=1,Outline=1,Shadow=0,Alignment=2,MarginV=145'"
     subprocess.run(["ffmpeg","-y","-loop","1","-i",str(OUT/"background.png"),"-i",str(OUT/"voice.wav"),"-vf",vf,"-t",str(duration),"-r","30","-c:v","libx264","-preset","veryfast","-pix_fmt","yuv420p","-c:a","aac","-b:a","128k","-shortest",str(OUT/"daily-short.mp4")], check=True)
     result = subprocess.run(["ffprobe","-v","error","-show_entries","stream=codec_type,width,height","-of","json",str(OUT/"daily-short.mp4")], capture_output=True, text=True, check=True)
     streams = json.loads(result.stdout)["streams"]
