@@ -95,7 +95,7 @@ def is_recent_published(raw_date, now=None):
 
 
 def fetch_article_context(item):
-    """Fetch linked publisher page; RSS alone is not treated as full evidence.""
+    """Fetch linked publisher page; RSS alone is not treated as full evidence."""
     try:
         response = requests.get(item["url"], timeout=18, headers={
             "User-Agent": "Mozilla/5.0 (compatible; DailyAINewsShort/1.0)",
