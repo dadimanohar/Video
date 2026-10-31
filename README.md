@@ -3,12 +3,13 @@
 A free-first scheduled AI-news Shorts pipeline for the YouTube channel. GitHub Actions is the execution host; this repository is the source and dashboard. It is not an always-on web server.
 
 ## Pipeline
-1. Discover AI news from publisher feeds.
-2. Generate an Indian Professional English script using Gemini.
-3. Narrate with offline eSpeak NG.
-4. Render a vertical MP4 with compact captions using FFmpeg.
-5. Upload through YouTube Data API OAuth.
-6. Preserve the video, script, metadata and upload receipt as a 7-day Actions artifact.
+1. Discover AI news from official OpenAI, Google, NVIDIA and Anthropic publisher feeds; links are restricted to those official domains.
+2. Prioritise recent entries (up to 14 days), fetch readable article text where available, and reject weakly supported or stale stories.
+3. Generate a validated Indian Professional English script using Gemini.
+4. Narrate with offline eSpeak NG.
+5. Render a vertical MP4 with compact captions using FFmpeg.
+6. Upload through YouTube Data API OAuth.
+7. Preserve the video, script, metadata and upload receipt as a 7-day Actions artifact.
 
 ## Schedule
 Daily at 09:00 Asia/Kolkata (03:30 UTC). Manual workflow runs are also supported.
@@ -29,7 +30,7 @@ Optional repository variable:
 Do not commit secrets or send them in chat. Create a Gemini API key in Google AI Studio. Enable YouTube Data API v3 in Google Cloud and create OAuth credentials. The refresh token must be authorized by the channel owner with the `youtube.upload` scope.
 
 ## Test
-1. The **Pipeline Smoke Test** runs automatically on relevant code pushes. It fetches a publisher feed item and creates a clearly labelled demo MP4 without Gemini or YouTube credentials.
+1. The **Pipeline Smoke Test** runs source/date regression tests, fetches a publisher feed item and creates a clearly labelled demo MP4 without Gemini or YouTube credentials.
 2. Download and inspect the `daily-shorts-pipeline-demo` artifact.
 3. After configuring all four secrets, run **Daily AI News Short** manually.
 4. Verify the uploaded video's privacy and playback before relying on the daily schedule.
