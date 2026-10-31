@@ -261,6 +261,34 @@ def render(data):
     if not any(s.get("codec_type")=="audio" for s in streams):
         raise RuntimeError("Rendered file has no audio.")
 
+def wait_for_video_processing(youtube, video_id, expected_privacy, timeout_seconds=600):
+    """Wait until YouTube confirms processing and the requested visibility."""
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        result = youtube.videos().list(
+            part="status,processingDetails", id=video_id
+        ).execute()
+        videos = result.get("items", [])
+        if videos:
+            video = videos[0]
+            processing = video.get("processingDetails", {}).get("processingStatus")
+            actual_privacy = video.get("status", {}).get("privacyStatus")
+            if processing == "failed":
+                raise RuntimeError("YouTube accepted the upload but video processing failed.")
+            if processing == "succeeded":
+                if actual_privacy != expected_privacy:
+                    raise RuntimeError(
+                        f"YouTube privacy verification failed: expected {expected_privacy}, got {actual_privacy!r}."
+                    )
+                return video
+        if time.monotonic() >= deadline:
+            raise RuntimeError(
+                "YouTube accepted the upload, but processing was not confirmed before the 10-minute verification timeout."
+            )
+        print("Waiting for YouTube video processing...")
+        time.sleep(20)
+
+
 def upload(data):
     from google.oauth2.credentials import Credentials
     from googleapiclient.discovery import build
@@ -289,8 +317,17 @@ def upload(data):
         if status: print(f"YouTube upload: {int(status.progress()*100)}%")
     video_id=response.get("id")
     if not video_id: raise RuntimeError("YouTube API returned no video ID.")
-    (OUT/"youtube-upload.json").write_text(json.dumps({"video_id":video_id,"url":f"https://youtube.com/shorts/{video_id}","uploaded_at":datetime.now(timezone.utc).isoformat()},indent=2))
-    print(f"UPLOAD_SUCCESS https://youtube.com/shorts/{video_id}")
+    verified = wait_for_video_processing(youtube, video_id, privacy)
+    processing = verified.get("processingDetails", {}).get("processingStatus")
+    receipt = {
+        "video_id": video_id,
+        "url": f"https://youtube.com/shorts/{video_id}",
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "privacy": privacy,
+        "processing_status": processing
+    }
+    (OUT/"youtube-upload.json").write_text(json.dumps(receipt,indent=2))
+    print(f"UPLOAD_SUCCESS {receipt['url']} (processing={processing}, privacy={privacy})")
 
 def main():
     test_mode = "--test" in sys.argv or os.getenv("TEST_MODE","").lower() in ("1","true","yes")
