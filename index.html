@@ -16,7 +16,7 @@ footer{margin-top:42px;border-top:1px solid var(--line);padding-top:18px;color:v
 <div class="card"><h2>Publishing safety</h2><div class="big">Private by default</div><div class="muted">Public publishing only after Google API verification</div></div>
 </section>
 <section class="card"><h2>Pipeline status</h2><p id="status">Status data is published by the latest GitHub Actions run. Open Actions to inspect the actual run and download the MP4 artifact.</p>
-<div class="muted" id="updated">No verified production run has been recorded by this dashboard yet.</div>
+<div class="muted" id="updated">No production run has been recorded yet.</div><div class="muted" id="video"></div>
 <a class="btn" href="https://github.com/dadimanohar/Video/actions">Open workflow runs</a><a class="btn" href="https://github.com/dadimanohar/Video">Source repository</a></section>
 <section class="card" style="margin-top:14px"><h2>First-time setup required</h2><ol class="steps">
 <li>Add the four repository secrets: <code>GEMINI_API_KEY</code>, <code>YOUTUBE_CLIENT_ID</code>, <code>YOUTUBE_CLIENT_SECRET</code>, <code>YOUTUBE_REFRESH_TOKEN</code>.</li>
@@ -30,6 +30,6 @@ footer{margin-top:42px;border-top:1px solid var(--line);padding-top:18px;color:v
 fetch('./status.json',{cache:'no-store'}).then(r=>r.ok?r.json():Promise.reject()).then(s=>{
 document.getElementById('health').textContent=s.status||'Status available';
 document.getElementById('status').textContent=s.message||'Latest workflow status available.';
-document.getElementById('updated').textContent='Last updated: '+(s.updated_at||'not recorded')+' · '+(s.run_url||'');
+document.getElementById('updated').textContent='Last updated: '+(s.updated_at||'not recorded')+' · '+(s.run_url||'');\nif(s.video_url){const a=document.createElement('a');a.href=s.video_url;a.textContent='Open latest uploaded Short';a.target='_blank';a.rel='noopener';document.getElementById('video').replaceChildren(a);}
 }).catch(()=>{});
 </script></body></html>
