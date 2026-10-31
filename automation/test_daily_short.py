@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime, timezone
-from daily_short import ArticleTextParser, is_official_url, is_recent_published, parse_published_date
+from daily_short import ArticleTextParser, is_official_url, is_recent_published, parse_published_date, wait_for_video_processing
 
 
 class SourceValidationTests(unittest.TestCase):
@@ -32,6 +32,45 @@ class SourceValidationTests(unittest.TestCase):
         self.assertTrue(is_recent_published("", now))
         self.assertFalse(is_recent_published("2026-10-15T00:00:00Z", now))
         self.assertFalse(is_recent_published("2026-11-02T00:00:00Z", now))
+ 
+class FakeRequest:
+    def __init__(self, payload):
+        self.payload = payload
+    def execute(self):
+        return self.payload
+
+
+class FakeVideos:
+    def __init__(self, payload):
+        self.payload = payload
+    def list(self, **kwargs):
+        return FakeRequest(self.payload)
+
+
+class FakeYoutube:
+    def __init__(self, payload):
+        self.payload = payload
+    def videos(self):
+        return FakeVideos(self.payload)
+
+
+class UploadVerificationTests(unittest.TestCase):
+    def test_processing_and_privacy_are_verified(self):
+        youtube = FakeYoutube({"items": [{
+            "id": "abc123",
+            "status": {"privacyStatus": "private"},
+            "processingDetails": {"processingStatus": "succeeded"}
+        }]})
+        result = wait_for_video_processing(youtube, "abc123", "private")
+        self.assertEqual(result["id"], "abc123")
+
+    def test_processing_failure_is_not_reported_as_success(self):
+        youtube = FakeYoutube({"items": [{
+            "status": {"privacyStatus": "private"},
+            "processingDetails": {"processingStatus": "failed"}
+        }]})
+        with self.assertRaisesRegex(RuntimeError, "processing failed"):
+            wait_for_video_processing(youtube, "abc123", "private")
 
 
 if __name__ == "__main__":
