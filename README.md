@@ -29,7 +29,9 @@ Optional repository variables:
 - `YOUTUBE_PRIVACY`: `private`, `unlisted` or `public`. Default is `private`.
 The Gemini free tier has usage limits; check Google's current limits before increasing volume.
 
-Do not commit secrets or send them in chat. Create a Gemini API key in Google AI Studio. Enable YouTube Data API v3 in Google Cloud and create OAuth credentials. The refresh token must be authorized by the channel owner with the `youtube.upload` scope.
+Do not commit secrets or send them in chat. Create a Gemini API key in Google AI Studio. Enable YouTube Data API v3 in Google Cloud and create OAuth credentials. The refresh token must be authorized by the channel owner with the `youtube.upload` scope and offline access.
+
+**Important for daily scheduling:** In Google Auth Platform, an External OAuth app left in **Testing** issues refresh tokens that expire after 7 days for this YouTube scope. Before generating the refresh token for unattended daily runs, set the app's publishing status to **In production**, then complete consent again and save the new refresh token in GitHub Actions secrets. Google may still show an unverified-app warning or require verification depending on the app's usage and requested scopes. Do not share the client secret or refresh token.
 
 ## Test
 1. The **Pipeline Smoke Test** runs source/date regression tests, fetches a publisher feed item and creates a clearly labelled demo MP4 without Gemini or YouTube credentials.
