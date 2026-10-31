@@ -167,7 +167,7 @@ Only use URLs from the supplied list."""
     resp = requests.post(
         f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent?key={key}",
         json={"contents":[{"parts":[{"text":prompt+"\n\nOFFICIAL FEED ITEMS:\n"+json.dumps(items,ensure_ascii=False)}]}],
-              "generationConfig":{"temperature":0.2,"responseMimeType":"application/json"}},
+              "generationConfig":{"responseMimeType":"application/json"}},
         timeout=60)
     if resp.status_code != 200:
         raise RuntimeError(f"Gemini API error {resp.status_code}: {resp.text[:1000]}")
