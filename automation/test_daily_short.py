@@ -1,0 +1,38 @@
+import unittest
+from datetime import datetime, timezone
+from daily_short import ArticleTextParser, is_official_url, is_recent_published, parse_published_date
+
+
+class SourceValidationTests(unittest.TestCase):
+    def test_official_domains_and_https(self):
+        self.assertTrue(is_official_url("https://openai.com/news/example"))
+        self.assertTrue(is_official_url("https://blog.google/technology/ai/example"))
+        self.assertTrue(is_official_url("https://blogs.nvidia.com/example"))
+        self.assertFalse(is_official_url("http://openai.com/news/example"))
+        self.assertFalse(is_official_url("https://openai.com.attacker.invalid/news"))
+        self.assertFalse(is_official_url("https://example.com/?next=https://openai.com"))
+
+    def test_article_parser_skips_navigation_and_reads_og_description(self):
+        parser = ArticleTextParser()
+        parser.feed('<meta property="og:description" content="Useful summary"><nav>Menu</nav><article><p>Article text</p></article><script>bad()</script>')
+        extracted = " ".join(parser.parts)
+        self.assertIn("Useful summary", extracted)
+        self.assertIn("Article text", extracted)
+        self.assertNotIn("Menu", extracted)
+        self.assertNotIn("bad()", extracted)
+
+    def test_rfc_and_iso_dates(self):
+        self.assertIsNotNone(parse_published_date("Sat, 31 Oct 2026 00:00:00 GMT"))
+        self.assertIsNotNone(parse_published_date("2026-10-31T00:00:00Z"))
+        self.assertIsNone(parse_published_date("not a date"))
+
+    def test_freshness_window_and_future_guard(self):
+        now = datetime(2026, 10, 31, tzinfo=timezone.utc)
+        self.assertTrue(is_recent_published("2026-10-30T00:00:00Z", now))
+        self.assertTrue(is_recent_published("", now))
+        self.assertFalse(is_recent_published("2026-10-15T00:00:00Z", now))
+        self.assertFalse(is_recent_published("2026-11-02T00:00:00Z", now))
+
+
+if __name__ == "__main__":
+    unittest.main()
