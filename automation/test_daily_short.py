@@ -29,7 +29,7 @@ class SourceValidationTests(unittest.TestCase):
     def test_freshness_window_and_future_guard(self):
         now = datetime(2026, 10, 31, tzinfo=timezone.utc)
         self.assertTrue(is_recent_published("2026-10-30T00:00:00Z", now))
-        self.assertTrue(is_recent_published("", now))
+        self.assertFalse(is_recent_published("", now))
         self.assertFalse(is_recent_published("2026-10-15T00:00:00Z", now))
         self.assertFalse(is_recent_published("2026-11-02T00:00:00Z", now))
  
