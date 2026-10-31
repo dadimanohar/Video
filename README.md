@@ -41,4 +41,4 @@ Do not commit secrets or send them in chat. Create a Gemini API key in Google AI
 - Production generation and upload require owner-configured API secrets.
 - Gemini quotas and Google OAuth verification requirements can change.
 - The offline voice is synthetic; visuals are a motion title card and captions, not cinematic AI footage.
-- Google may restrict unverified YouTube API projects to private uploads.
+- Uploads default to private. Change the repository variable only when the intended visibility has been explicitly selected.
