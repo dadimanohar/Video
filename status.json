@@ -1,10 +1,9 @@
 {
   "status": "SETUP_REQUIRED",
-  "message": "Code and video-render tests passed. Production upload is not yet verified: configure the four GitHub Actions secrets and run Daily AI News Short once.",
-  "updated_at": "2026-10-31T01:03:30Z",
-  "run_url": "https://github.com/dadimanohar/Video/actions/runs/41153289360",
-  "run_number": "27",
+  "message": "Production secrets are incomplete. Configure all four Actions secrets before uploading.",
+  "updated_at": "2026-10-31T09:50:44.919467+00:00",
+  "run_url": "https://github.com/dadimanohar/Video/actions/runs/41190291606",
+  "run_number": "1",
   "video_url": null,
-  "privacy": "private",
-  "latest_code_test_status": "success"
+  "privacy": "private"
 }
