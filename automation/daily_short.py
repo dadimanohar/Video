@@ -83,10 +83,10 @@ def parse_published_date(raw_date):
 
 
 def is_recent_published(raw_date, now=None):
-    """Keep undated items as a fallback; reject stale and implausibly future dates."""
+    """Reject undated, stale and implausibly future stories."""
     published = parse_published_date(raw_date)
     if published is None:
-        return True
+        return False
     now = now or datetime.now(timezone.utc)
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
