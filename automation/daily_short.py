@@ -26,7 +26,7 @@ FEEDS = [
     "https://blogs.nvidia.com/feed/",
 ]
 MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
-OFFICIAL_DOMAINS = ("openai.com", "google.com", "anthropic.com", "nvidia.com")
+OFFICIAL_DOMAINS = ("openai.com", "google.com", "blog.google", "anthropic.com", "nvidia.com")
 
 def is_official_url(url: str) -> bool:
     host = (urlparse(url).hostname or "").lower()
